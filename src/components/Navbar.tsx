@@ -212,6 +212,20 @@ export const Navbar: React.FC = () => {
             </div>
           ) : null}
 
+          {/* Mobile Theme Toggle */}
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              {theme === 'dark' ? <Moon className="w-4 h-4 text-indigo-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
+              Appearance
+            </span>
+            <button
+              onClick={toggleTheme}
+              className="text-xs font-semibold px-2.5 py-1 rounded-md bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+            >
+              Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode
+            </button>
+          </div>
+
           {isAuthenticated ? (
             <>
               <Link
