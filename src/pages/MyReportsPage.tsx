@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Item } from '../types';
 import { useToast } from '../context/ToastContext';
-import { formatDate } from '../utils/formatters';
+import { formatDate, getFileUrl } from '../utils/formatters';
 import { CardGridSkeleton } from '../components/LoadingSkeleton';
 import { EmptyState } from '../components/EmptyState';
 import { ReturnConfirmModal } from '../components/ReturnConfirmModal';
@@ -143,7 +143,12 @@ export const MyReportsPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredItems.map((item) => {
               const firstFile = item.files && item.files.length > 0 ? item.files[0] : null;
-              const isImage = firstFile && firstFile.file_type.startsWith('image/');
+              const isImage =
+                firstFile &&
+                (firstFile.file_type.startsWith('image/') ||
+                  firstFile.file_path.startsWith('data:image') ||
+                  /\.(png|jpe?g|webp|gif|svg)$/i.test(firstFile.file_name));
+              const fileUrl = firstFile ? getFileUrl(firstFile.file_path) : '';
 
               return (
                 <div
@@ -153,10 +158,13 @@ export const MyReportsPage: React.FC = () => {
                   <div className="relative h-40 bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
                     {isImage ? (
                       <img
-                        src={`/${firstFile.file_path}`}
+                        src={fileUrl}
                         alt={item.item_name}
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
                       />
                     ) : (
                       <Tag className="w-10 h-10 text-slate-400" />

@@ -140,7 +140,15 @@ export const Navbar: React.FC = () => {
               >
                 <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-semibold text-xs flex items-center justify-center border border-indigo-200 dark:border-indigo-800">
                   {user.profile_photo ? (
-                    <img src={user.profile_photo} alt={user.full_name} className="w-full h-full rounded-full object-cover" />
+                    <img
+                      src={user.profile_photo}
+                      alt={user.full_name}
+                      className="w-full h-full rounded-full object-cover"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
                   ) : (
                     user.full_name.slice(0, 2).toUpperCase()
                   )}

@@ -95,7 +95,15 @@ export const ProfilePage: React.FC = () => {
         <div className="md:col-span-1 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex flex-col items-center text-center">
           <div className="w-24 h-24 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-2xl mb-4 border-2 border-indigo-200 dark:border-indigo-800 overflow-hidden shadow-inner">
             {profilePhoto ? (
-              <img src={profilePhoto} alt={user.full_name} className="w-full h-full object-cover" />
+              <img
+                src={profilePhoto}
+                alt={user.full_name}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
             ) : (
               user.full_name.slice(0, 2).toUpperCase()
             )}

@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Item } from '../types';
-import { formatDate } from '../utils/formatters';
+import { formatDate, getFileUrl } from '../utils/formatters';
 import {
   MapPin,
   Calendar,
@@ -19,10 +19,16 @@ interface ItemCardProps {
 }
 
 export const ItemCard: React.FC<ItemCardProps> = ({ item, matchScore, highlightMatch }) => {
+  const [imgError, setImgError] = useState(false);
   const isLost = item.item_type === 'LOST';
   const firstFile = item.files && item.files.length > 0 ? item.files[0] : null;
-  const isImage = firstFile && firstFile.file_type.startsWith('image/');
+  const isImage =
+    firstFile &&
+    (firstFile.file_type.startsWith('image/') ||
+      firstFile.file_path.startsWith('data:image') ||
+      /\.(png|jpe?g|webp|gif|svg)$/i.test(firstFile.file_name));
   const isPdf = firstFile && firstFile.file_type === 'application/pdf';
+  const fileUrl = firstFile ? getFileUrl(firstFile.file_path) : '';
 
   return (
     <div
@@ -35,12 +41,13 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, matchScore, highlightM
     >
       {/* Top Media / Thumbnail Section */}
       <div className="relative h-44 w-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
-        {isImage ? (
+        {isImage && !imgError ? (
           <img
-            src={`/${firstFile.file_path}`}
+            src={fileUrl}
             alt={item.item_name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             referrerPolicy="no-referrer"
+            onError={() => setImgError(true)}
           />
         ) : isPdf ? (
           <div className="flex flex-col items-center gap-1.5 text-rose-500 dark:text-rose-400">
@@ -50,7 +57,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, matchScore, highlightM
         ) : (
           <div className="flex flex-col items-center gap-2 text-slate-400 dark:text-slate-500">
             <Package className="w-12 h-12 stroke-[1.5]" />
-            <span className="text-xs font-medium tracking-wide">Campus Item</span>
+            <span className="text-xs font-medium tracking-wide">{item.category || 'Campus Item'}</span>
           </div>
         )}
 

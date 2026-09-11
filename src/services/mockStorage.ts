@@ -198,7 +198,18 @@ function getStoredItems(): Item[] {
       localStorage.setItem(ITEMS_KEY, JSON.stringify(DEFAULT_ITEMS));
       return DEFAULT_ITEMS;
     }
-    return JSON.parse(raw);
+    const items: Item[] = JSON.parse(raw);
+    // Sanitize any corrupt file_path in existing items (e.g. leading slashes before data URLs)
+    items.forEach(item => {
+      if (item.files) {
+        item.files.forEach(f => {
+          if (f.file_path && f.file_path.startsWith('/data:')) {
+            f.file_path = f.file_path.slice(1);
+          }
+        });
+      }
+    });
+    return items;
   } catch {
     return DEFAULT_ITEMS;
   }
@@ -626,26 +637,93 @@ export const mockStorage = {
     if (idx === -1) throw new Error('Item not found');
 
     return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const fileObj = {
-          id: Date.now(),
-          item_id: itemId,
-          file_name: file.name,
-          file_path: reader.result as string,
-          file_type: file.type,
-          file_size: file.size,
-          created_at: new Date().toISOString(),
+      // If it is an image, optimize dimensions to save localStorage space while preserving clarity
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const rawUrl = e.target?.result as string;
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              let { width, height } = img;
+              const maxDim = 1200;
+              if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                  height = Math.round((height * maxDim) / width);
+                  width = maxDim;
+                } else {
+                  width = Math.round((width * maxDim) / height);
+                  height = maxDim;
+                }
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, width, height);
+                const dataUrl = canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.85);
+                const fileObj = {
+                  id: Date.now(),
+                  item_id: itemId,
+                  file_name: file.name,
+                  file_path: dataUrl,
+                  file_type: file.type,
+                  file_size: Math.round((dataUrl.length * 3) / 4),
+                  created_at: new Date().toISOString(),
+                };
+                if (!items[idx].files) items[idx].files = [];
+                items[idx].files!.push(fileObj);
+                saveItems(items);
+                resolve(fileObj);
+                return;
+              }
+            } catch {}
+            saveRaw(rawUrl);
+          };
+          img.onerror = () => saveRaw(rawUrl);
+          img.src = rawUrl;
         };
-        if (!items[idx].files) items[idx].files = [];
-        items[idx].files!.push(fileObj);
-        saveItems(items);
-        resolve(fileObj);
-      };
-      reader.onerror = () => {
-        resolve({ id: Date.now(), item_id: itemId, file_name: file.name, file_path: '', file_type: file.type, file_size: file.size });
-      };
-      reader.readAsDataURL(file);
+        reader.onerror = () => {
+          resolve({ id: Date.now(), item_id: itemId, file_name: file.name, file_path: '', file_type: file.type, file_size: file.size });
+        };
+        reader.readAsDataURL(file);
+
+        function saveRaw(dataUrl: string) {
+          const fileObj = {
+            id: Date.now(),
+            item_id: itemId,
+            file_name: file.name,
+            file_path: dataUrl,
+            file_type: file.type,
+            file_size: file.size,
+            created_at: new Date().toISOString(),
+          };
+          if (!items[idx].files) items[idx].files = [];
+          items[idx].files!.push(fileObj);
+          saveItems(items);
+          resolve(fileObj);
+        }
+      } else {
+        // PDF or other documents
+        const reader = new FileReader();
+        reader.onload = () => {
+          const fileObj = {
+            id: Date.now(),
+            item_id: itemId,
+            file_name: file.name,
+            file_path: reader.result as string,
+            file_type: file.type,
+            file_size: file.size,
+            created_at: new Date().toISOString(),
+          };
+          if (!items[idx].files) items[idx].files = [];
+          items[idx].files!.push(fileObj);
+          saveItems(items);
+          resolve(fileObj);
+        };
+        reader.readAsDataURL(file);
+      }
     });
   },
 
